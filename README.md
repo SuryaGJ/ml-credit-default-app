@@ -103,24 +103,6 @@ The deployed Streamlit application includes:
 
 ---
 
-## Project Structure
-
-ml-credit-default-app/
-│
-├── app.py
-├── train_models.py
-├── requirements.txt
-├── README.md
-├── sample_test.csv
-├── model/
-│ ├── Logistic_Regression.pkl
-│ ├── Decision_Tree.pkl
-│ ├── KNN.pkl
-│ ├── Naive_Bayes.pkl
-│ ├── Random_Forest.pkl
-│ ├── XGBoost.pkl
-│ └── scaler.pkl
-
 ## Running Locally
 
 Install dependencies:
@@ -140,5 +122,6 @@ The application is deployed using **Streamlit Community Cloud** and provides an 
 Model training and testing were performed locally and executed on BITS Virtual Lab as required in the assignment instructions.
 
 ## Project Links
+
 
 - 🚀 **Live Streamlit App:** https://ml-credit-default-app-brdwzpq5mbz6ssgrbeungf.streamlit.app
