@@ -57,36 +57,28 @@ Each model was evaluated using:
 
 ## Model Performance Comparison
 
-| ML Model Name | Accuracy | AUC | Precision | Recall | F1 Score | MCC |
-|---------------|----------|-----|-----------|--------|----------|-----|
-| Logistic Regression | 0.8078 | 0.7076 | 0.6883 | 0.2396 | 0.3555 | 0.3251 |
-| Decision Tree | 0.8157 | 0.7453 | 0.6479 | 0.3647 | 0.4667 | 0.3878 |
-| KNN | 0.8003 | 0.7097 | 0.5820 | 0.3451 | 0.4333 | 0.3378 |
-| Naive Bayes | 0.7525 | 0.7249 | 0.4515 | 0.5539 | 0.4975 | 0.3386 |
-| Random Forest | 0.8138 | 0.7702 | 0.6744 | 0.3060 | 0.4209 | 0.3647 |
-| XGBoost | 0.8173 | 0.7765 | 0.6571 | 0.3640 | 0.4685 | 0.3925 |
+| Model               | Accuracy   | Precision  | Recall     | F1 Score   | AUC        | MCC        |
+| ------------------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| Logistic Regression | 0.8077     | 0.6868     | 0.2396     | 0.3553     | 0.7076     | 0.3244     |
+| Decision Tree       | 0.8153     | 0.6454     | 0.3662     | 0.4673     | 0.7406     | 0.3872     |
+| KNN                 | 0.8003     | 0.5820     | 0.3451     | 0.4333     | 0.7098     | 0.3378     |
+| Naive Bayes         | 0.7525     | 0.4515     | 0.5539     | 0.4975     | 0.7249     | 0.3386     |
+| Random Forest       | 0.8138     | 0.6744     | 0.3060     | 0.4209     | 0.7702     | 0.3647     |
+| **XGBoost** ⭐       | **0.8173** | **0.6571** | **0.3640** | **0.4685** | **0.7765** | **0.3925** |
+
 
 ---
 
 ## Observations on Model Performance
 
-### Logistic Regression
-Logistic Regression achieved stable accuracy but low recall, indicating difficulty identifying default cases due to linear decision boundaries.
-
-### Decision Tree
-Decision Tree achieved strong balanced performance with improved recall and MCC score, capturing nonlinear relationships effectively.
-
-### K-Nearest Neighbors (KNN)
-KNN produced moderate and consistent results but requires higher computation and careful scaling.
-
-### Naive Bayes
-Naive Bayes achieved the highest recall among models, successfully identifying more default customers, though overall accuracy decreased.
-
-### Random Forest
-Random Forest improved overall robustness and AUC score through ensemble learning, reducing variance compared to a single decision tree.
-
-### XGBoost
-XGBoost achieved the best overall performance with highest accuracy, AUC, and MCC, demonstrating strong predictive capability for structured tabular data.
+| Model               | Observation                                                             |
+| ------------------- | ----------------------------------------------------------------------- |
+| Logistic Regression | Good baseline model but struggles to detect defaulters (low recall).    |
+| Decision Tree       | Captures nonlinear relationships effectively with balanced performance. |
+| KNN                 | Performs reasonably well but sensitive to feature scaling.              |
+| Naive Bayes         | High recall but lower precision due to probabilistic assumptions.       |
+| Random Forest       | More stable than a single tree and improves overall robustness.         |
+| XGBoost             | Achieved best overall performance with highest AUC and MCC scores.      |
 
 ---
 
@@ -144,3 +136,4 @@ Model training and testing were performed locally and executed on BITS Virtual L
 
 
 - 🚀 **Live Streamlit App:** https://ml-credit-default-app-nwcceprhtwmyposcd8qcme.streamlit.app
+
