@@ -8,38 +8,41 @@ import io
 from sklearn.metrics import classification_report, confusion_matrix
 
 # --------------------------------------------------
-# PAGE TITLE
+# PAGE
 # --------------------------------------------------
 st.title("Credit Card Default Prediction App")
-st.write(
-    "Interactive ML application to predict credit card default risk "
-    "using multiple classification models."
-)
 
 # --------------------------------------------------
-# SAFE MODEL LOADER (sklearn version compatible)
+# SAFE MODEL LOADER
 # --------------------------------------------------
+@st.cache_resource(show_spinner=False)
 def load_model_safe(path):
     model = joblib.load(path)
 
-    # Patch for newer sklearn versions
+    # sklearn compatibility patch
     if hasattr(model, "__dict__") and "monotonic_cst" not in model.__dict__:
         model.monotonic_cst = None
 
-    # Random Forest internal trees
     if hasattr(model, "estimators_"):
         for tree in model.estimators_:
-            if hasattr(tree, "__dict__") and "monotonic_cst" not in tree.__dict__:
+            if "monotonic_cst" not in tree.__dict__:
                 tree.monotonic_cst = None
 
     return model
 
 
-# --------------------------------------------------
-# LOAD ARTIFACTS
-# --------------------------------------------------
-scaler = joblib.load("model/scaler.pkl")
-feature_cols = joblib.load("model/feature_columns.pkl")
+@st.cache_resource(show_spinner=False)
+def load_scaler():
+    return joblib.load("model/scaler.pkl")
+
+
+@st.cache_resource(show_spinner=False)
+def load_features():
+    return joblib.load("model/feature_columns.pkl")
+
+
+scaler = load_scaler()
+feature_cols = load_features()
 
 # --------------------------------------------------
 # MODEL SELECTION
@@ -59,48 +62,44 @@ model_name = st.selectbox(
 model_path = f"model/{model_name.replace(' ','_')}.pkl"
 model = load_model_safe(model_path)
 
+st.success(f"✅ Active Model: {model_name}")
+
 # --------------------------------------------------
 # DATA INPUT
 # --------------------------------------------------
-st.subheader("Upload Test CSV (Optional)")
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload Test CSV", type=["csv"])
 
-if uploaded_file is not None:
+if uploaded_file:
     data = pd.read_csv(uploaded_file)
-    st.success("Using uploaded dataset.")
+    st.success("Using uploaded dataset")
 else:
     data = pd.read_csv("sample_test.csv")
-    st.info("No file uploaded. Using default sample dataset.")
+    st.info("Using default sample dataset")
 
 TARGET = "default.payment.next.month"
 
 if TARGET not in data.columns:
-    st.error(f"Target column '{TARGET}' not found.")
+    st.error("Target column missing")
     st.stop()
 
 # --------------------------------------------------
-# PREPROCESSING (MATCHES TRAINING EXACTLY)
+# PREPROCESSING
 # --------------------------------------------------
 y_true = data[TARGET]
 X = data.drop(columns=[TARGET])
 
-# Drop ID if present
 if "ID" in X.columns:
     X = X.drop(columns=["ID"])
 
-# Convert to numeric safely
 X = X.apply(pd.to_numeric, errors="coerce")
 
-# Align feature order with training
+# FORCE SAME FEATURE ORDER
 X = X.reindex(columns=feature_cols)
 
-# SAME imputation used during training
+# SAME TRAINING IMPUTATION
 X = X.fillna(X.mean())
-
-# Final safety cleanup
 X = X.replace([np.inf, -np.inf], np.nan).fillna(0)
 
-# Scale
 X_scaled = scaler.transform(X)
 
 # --------------------------------------------------
@@ -109,22 +108,21 @@ X_scaled = scaler.transform(X)
 preds = model.predict(X_scaled)
 
 st.subheader("Predictions")
-st.write(preds)
+st.write(preds[:20])
 
 # --------------------------------------------------
 # CLASSIFICATION REPORT
 # --------------------------------------------------
-st.subheader("Evaluation Metrics (Classification Report)")
+st.subheader("Evaluation Metrics")
 
 report = classification_report(y_true, preds, output_dict=True)
 report_df = pd.DataFrame(report).transpose()
+
 st.dataframe(report_df)
 
-# Download classification report
-csv = report_df.to_csv().encode("utf-8")
 st.download_button(
-    "Download Classification Report (CSV)",
-    csv,
+    "Download Classification Report",
+    report_df.to_csv().encode(),
     "classification_report.csv",
     "text/csv",
 )
@@ -138,17 +136,17 @@ cm = confusion_matrix(y_true, preds)
 
 fig, ax = plt.subplots()
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-ax.set_xlabel("Predicted Label")
-ax.set_ylabel("True Label")
+
+ax.set_xlabel("Predicted")
+ax.set_ylabel("Actual")
 
 st.pyplot(fig)
 
-# Download confusion matrix
 buf = io.BytesIO()
 fig.savefig(buf, format="png")
 
 st.download_button(
-    "Download Confusion Matrix (PNG)",
+    "Download Confusion Matrix",
     buf.getvalue(),
     "confusion_matrix.png",
     "image/png",
