@@ -142,4 +142,5 @@ Model training and testing were performed locally and executed on BITS Virtual L
 
 ## Project Links
 
-- 🚀 **Live Streamlit App:** https://ml-credit-default-app-brdwzpq5mbz6ssgrbeungf.streamlit.app
+
+- 🚀 **Live Streamlit App:** https://ml-credit-default-app-nwcceprhtwmyposcd8qcme.streamlit.app
