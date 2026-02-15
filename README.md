@@ -59,34 +59,34 @@ Each model was evaluated using:
 
 | ML Model Name | Accuracy | AUC | Precision | Recall | F1 Score | MCC |
 |---------------|----------|-----|-----------|--------|----------|-----|
-| Logistic Regression | 0.8098 | 0.6033 | 0.6920 | 0.2361 | 0.3521 | 0.3251 |
-| Decision Tree | 0.7255 | 0.6105 | 0.3807 | 0.4059 | 0.3929 | 0.2160 |
-| KNN | 0.7952 | 0.6373 | 0.5493 | 0.3564 | 0.4323 | 0.3252 |
-| Naive Bayes | 0.7070 | 0.6866 | 0.3967 | 0.6504 | 0.4928 | 0.3218 |
-| Random Forest | 0.8143 | 0.6213 | 0.6874 | 0.2780 | 0.3959 | 0.3531 |
-| XGBoost | 0.8148 | 0.6520 | 0.6347 | 0.3625 | 0.4615 | 0.3801 |
+| Logistic Regression | 0.8078 | 0.7076 | 0.6883 | 0.2396 | 0.3555 | 0.3251 |
+| Decision Tree | 0.8157 | 0.7453 | 0.6479 | 0.3647 | 0.4667 | 0.3878 |
+| KNN | 0.8003 | 0.7097 | 0.5820 | 0.3451 | 0.4333 | 0.3378 |
+| Naive Bayes | 0.7525 | 0.7249 | 0.4515 | 0.5539 | 0.4975 | 0.3386 |
+| Random Forest | 0.8138 | 0.7702 | 0.6744 | 0.3060 | 0.4209 | 0.3647 |
+| XGBoost | 0.8173 | 0.7765 | 0.6571 | 0.3640 | 0.4685 | 0.3925 |
 
 ---
 
 ## Observations on Model Performance
 
 ### Logistic Regression
-Logistic Regression achieved high accuracy but low recall, indicating difficulty detecting default cases due to linear decision boundaries.
+Logistic Regression achieved stable accuracy but low recall, indicating difficulty identifying default cases due to linear decision boundaries.
 
 ### Decision Tree
-Decision Tree produced balanced precision and recall but lower overall accuracy, showing sensitivity to overfitting.
+Decision Tree achieved strong balanced performance with improved recall and MCC score, capturing nonlinear relationships effectively.
 
-### K-Nearest Neighbors
-KNN showed stable performance with moderate accuracy and balanced metrics but requires feature scaling and higher computation.
+### K-Nearest Neighbors (KNN)
+KNN produced moderate and consistent results but requires higher computation and careful scaling.
 
 ### Naive Bayes
-Naive Bayes achieved the highest recall, identifying more default customers, though overall accuracy decreased due to independence assumptions.
+Naive Bayes achieved the highest recall among models, successfully identifying more default customers, though overall accuracy decreased.
 
-### Random Forest (Ensemble)
-Random Forest achieved strong accuracy and improved MCC score by combining multiple decision trees, reducing variance.
+### Random Forest
+Random Forest improved overall robustness and AUC score through ensemble learning, reducing variance compared to a single decision tree.
 
-### XGBoost (Ensemble)
-XGBoost achieved the best balanced performance among models, demonstrating strong capability for structured tabular datasets.
+### XGBoost
+XGBoost achieved the best overall performance with highest accuracy, AUC, and MCC, demonstrating strong predictive capability for structured tabular data.
 
 ---
 
@@ -103,6 +103,24 @@ The deployed Streamlit application includes:
 
 ---
 
+## Project Structure
+
+ml-credit-default-app/
+│
+├── app.py
+├── train_models.py
+├── requirements.txt
+├── README.md
+├── sample_test.csv
+├── model/
+│ ├── Logistic_Regression.pkl
+│ ├── Decision_Tree.pkl
+│ ├── KNN.pkl
+│ ├── Naive_Bayes.pkl
+│ ├── Random_Forest.pkl
+│ ├── XGBoost.pkl
+│ └── scaler.pkl
+
 ## Running Locally
 
 Install dependencies:
@@ -117,11 +135,11 @@ The application is deployed using **Streamlit Community Cloud** and provides an 
 
 ---
 
+
 ## Execution Environment
 
 Model training and testing were performed locally and executed on BITS Virtual Lab as required in the assignment instructions.
 
 ## Project Links
-
 
 - 🚀 **Live Streamlit App:** https://ml-credit-default-app-brdwzpq5mbz6ssgrbeungf.streamlit.app

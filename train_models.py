@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 import joblib
-
 import os
-os.makedirs("model", exist_ok=True)
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -16,7 +14,6 @@ from sklearn.metrics import (
     matthews_corrcoef
 )
 
-# Models
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -24,86 +21,109 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
+# -----------------------------
+# CREATE MODEL DIRECTORY
+# -----------------------------
+os.makedirs("model", exist_ok=True)
 
 print("Loading dataset...")
+
 df = pd.read_csv("UCI_Credit_Card.csv")
 
 # -----------------------------
-# DATA PREPROCESSING
+# BASIC CLEANING
 # -----------------------------
+TARGET = "default.payment.next.month"
 
-# Drop ID column (not useful)
-df.drop("ID", axis=1, inplace=True)
+y = df[TARGET]
+X = df.drop(columns=[TARGET])
 
-# Target
-y = df["default.payment.next.month"]
+if "ID" in X.columns:
+    X = X.drop(columns=["ID"])
 
-# Features
-X = df.drop("default.payment.next.month", axis=1)
+# convert all to numeric (safety)
+X = X.apply(pd.to_numeric, errors="coerce")
 
-# Train Test Split
+# fill missing values
+X = X.fillna(X.mean())
+
+# -----------------------------
+# SAVE FEATURE ORDER ⭐ IMPORTANT
+# -----------------------------
+feature_columns = X.columns.tolist()
+joblib.dump(feature_columns, "model/feature_columns.pkl")
+
+# -----------------------------
+# TRAIN TEST SPLIT
+# -----------------------------
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+    X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# Scaling (important for LR & KNN)
+# -----------------------------
+# SCALING
+# -----------------------------
 scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
 
 joblib.dump(scaler, "model/scaler.pkl")
 
 # -----------------------------
-# Evaluation Function
+# MODELS
 # -----------------------------
-def evaluate(name, model, preds):
-    results = {
+models = {
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Decision Tree": DecisionTreeClassifier(max_depth=8),
+    "KNN": KNeighborsClassifier(n_neighbors=7),
+    "Naive Bayes": GaussianNB(),
+    "Random Forest": RandomForestClassifier(
+        n_estimators=20,
+        max_depth=6,
+        random_state=42
+    ),
+    "XGBoost": XGBClassifier(
+        n_estimators=30,
+        max_depth=4,
+        eval_metric="logloss",
+        use_label_encoder=False
+    ),
+}
+
+results = []
+
+# -----------------------------
+# TRAINING LOOP
+# -----------------------------
+for name, model in models.items():
+    print(f"\nTraining {name}...")
+
+    model.fit(X_train_scaled, y_train)
+
+    preds = model.predict(X_test_scaled)
+    probs = model.predict_proba(X_test_scaled)[:, 1]
+
+    metrics = {
         "Model": name,
         "Accuracy": accuracy_score(y_test, preds),
         "Precision": precision_score(y_test, preds),
         "Recall": recall_score(y_test, preds),
         "F1": f1_score(y_test, preds),
-        "AUC": roc_auc_score(y_test, preds),
-        "MCC": matthews_corrcoef(y_test, preds)
+        "AUC": roc_auc_score(y_test, probs),
+        "MCC": matthews_corrcoef(y_test, preds),
     }
-    print(results)
-    return results
 
+    print(metrics)
+    results.append(metrics)
 
-results_list = []
-
-# -----------------------------
-# TRAIN MODELS
-# -----------------------------
-
-models = {
-    "Logistic Regression": LogisticRegression(max_iter=2000),
-    "Decision Tree": DecisionTreeClassifier(),
-    "KNN": KNeighborsClassifier(),
-    "Naive Bayes": GaussianNB(),
-    "Random Forest": RandomForestClassifier(n_estimators=100),
-    "XGBoost": XGBClassifier(eval_metric='logloss')
-}
-
-import os
-os.makedirs("model", exist_ok=True)
-
-for name, model in models.items():
-    print(f"\nTraining {name}...")
-    model.fit(X_train, y_train)
-
-    preds = model.predict(X_test)
-
-    results = evaluate(name, model, preds)
-    results_list.append(results)
-
-    joblib.dump(model, f"model/{name.replace(' ','_')}.pkl")
-
+    # save model
+    filename = f"model/{name.replace(' ','_')}.pkl"
+    joblib.dump(model, filename)
 
 # -----------------------------
-# SAVE RESULTS TABLE
+# SAVE RESULTS
 # -----------------------------
-results_df = pd.DataFrame(results_list)
+results_df = pd.DataFrame(results)
 results_df.to_csv("model_results.csv", index=False)
 
 print("\n✅ Training Complete!")
