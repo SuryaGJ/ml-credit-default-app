@@ -6,22 +6,19 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # -----------------------------
-# PAGE TITLE
+# TITLE
 # -----------------------------
 st.title("Credit Card Default Prediction App")
 st.write(
-    "Interactive Machine Learning application to predict credit card default risk "
+    "Interactive ML application to predict credit card default risk "
     "using multiple classification models."
 )
 
 # -----------------------------
-# LOAD SCALER
+# LOAD MODEL + SCALER
 # -----------------------------
 scaler = joblib.load("model/scaler.pkl")
 
-# -----------------------------
-# MODEL SELECTION
-# -----------------------------
 model_name = st.selectbox(
     "Select Model",
     [
@@ -43,7 +40,6 @@ model = joblib.load(model_path)
 st.subheader("Upload Test CSV (Optional)")
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-# Use uploaded file OR default sample dataset
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
     st.success("Using uploaded dataset.")
@@ -52,50 +48,55 @@ else:
     st.info("No file uploaded. Using default sample test dataset.")
 
 # -----------------------------
-# PREDICTION SECTION
+# VALIDATION + PREPROCESSING
 # -----------------------------
-if "default.payment.next.month" in data.columns:
+TARGET = "default.payment.next.month"
 
-    y_true = data["default.payment.next.month"]
+if TARGET not in data.columns:
+    st.error(f"Target column '{TARGET}' not found.")
+    st.stop()
 
-    X = data.drop("default.payment.next.month", axis=1)
+y_true = data[TARGET]
+X = data.drop(TARGET, axis=1)
 
-    # Drop ID column safely
-    if "ID" in X.columns:
-        X = X.drop("ID", axis=1)
+# Drop ID safely
+if "ID" in X.columns:
+    X = X.drop("ID", axis=1)
 
-    # Scale features
-    X_scaled = scaler.transform(X)
+# Convert everything to numeric
+X = X.apply(pd.to_numeric, errors="coerce")
 
-    # Predictions
-    preds = model.predict(X_scaled)
+# Fill missing values safely
+X = X.fillna(X.mean())
 
-    # -----------------------------
-    # DISPLAY RESULTS
-    # -----------------------------
-    st.subheader("Predictions")
-    st.write(preds)
+# Ensure same column order used during training
+expected_features = scaler.feature_names_in_
+X = X.reindex(columns=expected_features, fill_value=0)
 
-    # -----------------------------
-    # CLASSIFICATION REPORT
-    # -----------------------------
-    st.subheader("Evaluation Metrics (Classification Report)")
-    report = classification_report(y_true, preds, output_dict=True)
-    st.dataframe(pd.DataFrame(report).transpose())
+# -----------------------------
+# SCALING + PREDICTION
+# -----------------------------
+X_scaled = scaler.transform(X)
+preds = model.predict(X_scaled)
 
-    # -----------------------------
-    # CONFUSION MATRIX
-    # -----------------------------
-    st.subheader("Confusion Matrix")
+# -----------------------------
+# OUTPUT
+# -----------------------------
+st.subheader("Predictions")
+st.write(preds)
 
-    cm = confusion_matrix(y_true, preds)
+# Evaluation metrics
+st.subheader("Evaluation Metrics (Classification Report)")
+report = classification_report(y_true, preds, output_dict=True)
+st.dataframe(pd.DataFrame(report).transpose())
 
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-    ax.set_xlabel("Predicted Label")
-    ax.set_ylabel("True Label")
+# Confusion Matrix
+st.subheader("Confusion Matrix")
+cm = confusion_matrix(y_true, preds)
 
-    st.pyplot(fig)
+fig, ax = plt.subplots()
+sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
+ax.set_xlabel("Predicted Label")
+ax.set_ylabel("True Label")
 
-else:
-    st.error("Target column 'default.payment.next.month' not found in dataset.")
+st.pyplot(fig)
