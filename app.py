@@ -81,6 +81,13 @@ X = X.fillna(0)
 # scale
 X_scaled = scaler.transform(X)
 
+# FINAL SAFETY CHECK
+if X.isna().any().any():
+    st.error("NaN values detected after preprocessing.")
+    st.write(X.isna().sum())
+    st.stop()
+
+
 # -----------------------------------
 # PREDICTION
 # -----------------------------------
