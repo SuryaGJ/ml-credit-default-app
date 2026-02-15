@@ -1,30 +1,42 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
-import io
 
-from sklearn.metrics import classification_report, confusion_matrix
-
-# -----------------------------------
-# TITLE
-# -----------------------------------
 st.title("Credit Card Default Prediction App")
-st.write(
-    "Interactive Machine Learning application to predict credit card "
-    "default risk using multiple classification models."
-)
 
-# -----------------------------------
-# LOAD ARTIFACTS
-# -----------------------------------
+# -----------------------------
+# SAFE MODEL LOADER
+# -----------------------------
+def load_model_safe(path):
+    model = joblib.load(path)
+
+    # ---- sklearn forward compatibility patch ----
+    # New sklearn expects this attribute for tree models
+    if hasattr(model, "__dict__"):
+        if "monotonic_cst" not in model.__dict__:
+            model.monotonic_cst = None
+
+    # RandomForest contains internal trees
+    if hasattr(model, "estimators_"):
+        for tree in model.estimators_:
+            if "monotonic_cst" not in tree.__dict__:
+                tree.monotonic_cst = None
+
+    return model
+
+
+# -----------------------------
+# LOAD SCALER
+# -----------------------------
 scaler = joblib.load("model/scaler.pkl")
-feature_cols = joblib.load("model/feature_columns.pkl")
 
-# -----------------------------------
+# -----------------------------
 # MODEL SELECTION
-# -----------------------------------
+# -----------------------------
 model_name = st.selectbox(
     "Select Model",
     [
@@ -33,109 +45,89 @@ model_name = st.selectbox(
         "KNN",
         "Naive Bayes",
         "Random Forest",
-        "XGBoost",
-    ],
+        "XGBoost"
+    ]
 )
 
-model = joblib.load(f"model/{model_name.replace(' ','_')}.pkl")
+model_path = f"model/{model_name.replace(' ','_')}.pkl"
+model = load_model_safe(model_path)
 
-# -----------------------------------
-# DATA INPUT
-# -----------------------------------
-st.subheader("Upload Test CSV (Optional)")
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+# -----------------------------
+# FILE UPLOAD
+# -----------------------------
+uploaded_file = st.file_uploader(
+    "Upload Test CSV (Optional)", type=["csv"]
+)
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    st.success("Using uploaded dataset.")
-else:
-    df = pd.read_csv("sample_test.csv")
+# Default dataset if none uploaded
+if uploaded_file is None:
     st.info("No file uploaded. Using default sample test dataset.")
+    data = pd.read_csv("UCI_Credit_Card.csv").sample(500, random_state=42)
+else:
+    data = pd.read_csv(uploaded_file)
 
-TARGET = "default.payment.next.month"
-
-if TARGET not in df.columns:
-    st.error(f"Target column '{TARGET}' not found.")
+# -----------------------------
+# PREPROCESSING
+# -----------------------------
+if "default.payment.next.month" not in data.columns:
+    st.error("Target column missing!")
     st.stop()
 
-# -----------------------------------
-# PREPROCESSING (SAFE PIPELINE)
-# -----------------------------------
-y_true = df[TARGET]
-X = df.drop(columns=[TARGET])
+y_true = data["default.payment.next.month"]
+X = data.drop("default.payment.next.month", axis=1)
 
-# drop ID safely
 if "ID" in X.columns:
-    X = X.drop(columns=["ID"])
+    X = X.drop("ID", axis=1)
 
-# convert to numeric
-X = X.apply(pd.to_numeric, errors="coerce")
+# Handle ANY sklearn version strictness
+X = X.replace([np.inf, -np.inf], np.nan)
+X = X.fillna(X.median(numeric_only=True))
 
-# align with training features
-X = X.reindex(columns=feature_cols)
-
-# fill missing values
-X = X.fillna(X.mean())
-X = X.fillna(0)
-
-# scale
 X_scaled = scaler.transform(X)
 
-# FINAL SAFETY CHECK
-if X.isna().any().any():
-    st.error("NaN values detected after preprocessing.")
-    st.write(X.isna().sum())
-    st.stop()
-
-
-# -----------------------------------
+# -----------------------------
 # PREDICTION
-# -----------------------------------
+# -----------------------------
 preds = model.predict(X_scaled)
 
 st.subheader("Predictions")
 st.write(preds)
 
-# -----------------------------------
+# -----------------------------
 # CLASSIFICATION REPORT
-# -----------------------------------
-st.subheader("Evaluation Metrics (Classification Report)")
+# -----------------------------
+st.subheader("Classification Report")
 
 report = classification_report(y_true, preds, output_dict=True)
 report_df = pd.DataFrame(report).transpose()
-
 st.dataframe(report_df)
 
-# Download metrics
-csv = report_df.to_csv().encode("utf-8")
+# Download button
+csv_report = report_df.to_csv().encode("utf-8")
 st.download_button(
-    label="Download Classification Report (CSV)",
-    data=csv,
-    file_name="classification_report.csv",
-    mime="text/csv",
+    "Download Classification Report",
+    csv_report,
+    "classification_report.csv",
+    "text/csv"
 )
 
-# -----------------------------------
+# -----------------------------
 # CONFUSION MATRIX
-# -----------------------------------
+# -----------------------------
 st.subheader("Confusion Matrix")
 
 cm = confusion_matrix(y_true, preds)
 
 fig, ax = plt.subplots()
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
-ax.set_xlabel("Predicted Label")
-ax.set_ylabel("True Label")
-
 st.pyplot(fig)
 
 # Download confusion matrix image
-buf = io.BytesIO()
-fig.savefig(buf, format="png")
-
-st.download_button(
-    label="Download Confusion Matrix (PNG)",
-    data=buf.getvalue(),
-    file_name="confusion_matrix.png",
-    mime="image/png",
-)
+fig.savefig("confusion_matrix.png")
+with open("confusion_matrix.png", "rb") as f:
+    st.download_button(
+        "Download Confusion Matrix",
+        f,
+        "confusion_matrix.png",
+        "image/png"
+    )
