@@ -5,12 +5,23 @@ from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# -----------------------------
+# PAGE TITLE
+# -----------------------------
 st.title("Credit Card Default Prediction App")
+st.write(
+    "Interactive Machine Learning application to predict credit card default risk "
+    "using multiple classification models."
+)
 
-# Load scaler
+# -----------------------------
+# LOAD SCALER
+# -----------------------------
 scaler = joblib.load("model/scaler.pkl")
 
-# Model selection
+# -----------------------------
+# MODEL SELECTION
+# -----------------------------
 model_name = st.selectbox(
     "Select Model",
     [
@@ -26,34 +37,65 @@ model_name = st.selectbox(
 model_path = f"model/{model_name.replace(' ','_')}.pkl"
 model = joblib.load(model_path)
 
-uploaded_file = st.file_uploader("Upload Test CSV", type=["csv"])
+# -----------------------------
+# DATA INPUT
+# -----------------------------
+st.subheader("Upload Test CSV (Optional)")
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-if uploaded_file:
-
+# Use uploaded file OR default sample dataset
+if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
+    st.success("Using uploaded dataset.")
+else:
+    data = pd.read_csv("sample_test.csv")
+    st.info("No file uploaded. Using default sample test dataset.")
 
-    if "default.payment.next.month" in data.columns:
-        y_true = data["default.payment.next.month"]
-        X = data.drop("default.payment.next.month", axis=1)
+# -----------------------------
+# PREDICTION SECTION
+# -----------------------------
+if "default.payment.next.month" in data.columns:
+
+    y_true = data["default.payment.next.month"]
+
+    X = data.drop("default.payment.next.month", axis=1)
+
+    # Drop ID column safely
+    if "ID" in X.columns:
         X = X.drop("ID", axis=1)
 
-        X_scaled = scaler.transform(X)
+    # Scale features
+    X_scaled = scaler.transform(X)
 
-        preds = model.predict(X_scaled)
+    # Predictions
+    preds = model.predict(X_scaled)
 
-        st.subheader("Predictions")
-        st.write(preds)
+    # -----------------------------
+    # DISPLAY RESULTS
+    # -----------------------------
+    st.subheader("Predictions")
+    st.write(preds)
 
-        st.subheader("Classification Report")
-        report = classification_report(y_true, preds, output_dict=True)
-        st.dataframe(pd.DataFrame(report).transpose())
+    # -----------------------------
+    # CLASSIFICATION REPORT
+    # -----------------------------
+    st.subheader("Evaluation Metrics (Classification Report)")
+    report = classification_report(y_true, preds, output_dict=True)
+    st.dataframe(pd.DataFrame(report).transpose())
 
-        st.subheader("Confusion Matrix")
-        cm = confusion_matrix(y_true, preds)
+    # -----------------------------
+    # CONFUSION MATRIX
+    # -----------------------------
+    st.subheader("Confusion Matrix")
 
-        fig, ax = plt.subplots()
-        sns.heatmap(cm, annot=True, fmt="d", ax=ax)
-        st.pyplot(fig)
+    cm = confusion_matrix(y_true, preds)
 
-    else:
-        st.error("Target column missing!")
+    fig, ax = plt.subplots()
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
+    ax.set_xlabel("Predicted Label")
+    ax.set_ylabel("True Label")
+
+    st.pyplot(fig)
+
+else:
+    st.error("Target column 'default.payment.next.month' not found in dataset.")
